@@ -14,8 +14,6 @@
 ; motion value.
 
 ; Notes: X 0 = P0, 1 = P1, 2 = M0, 3 = M1, 4 = Ball.
-    MAC SET_X
-
 SetX
     sta WSYNC
     bit 0
@@ -31,5 +29,3 @@ SetXDivide
     sta RESP0,x
     sta HMP0,x
     rts
-
-    ENDM

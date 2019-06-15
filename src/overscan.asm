@@ -1,5 +1,3 @@
-    MAC OVERSCAN
-
     lda #%10000010
     sta VBLANK
 
@@ -7,10 +5,6 @@
     sta WSYNC
     sta TIM64T
 
-
-
 WaitOverscan
     lda INTIM
     bne WaitOverscan
-
-    ENDM
