@@ -1,7 +1,3 @@
-;------------
-;--[ SetX ]--
-;------------
-
 ; Set exact x-coordinate of sprite P0,x to A.
 
 ; In: A = x-coordinate

@@ -1,0 +1,9 @@
+    .byte #$00
+    .byte #$86
+    .byte #$86
+    .byte #$6A
+    .byte #$68
+    .byte #$4F
+    .byte #$A8
+    .byte #$45
+    .byte #$BF

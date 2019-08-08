@@ -1,12 +1,11 @@
     lda #0
     sta VBLANK
 
-    ldy #192
-VisibleLoop
+    lda #228 ;(((192 * 76) + 13) / 64) = 228.203125
     sta WSYNC
-    include "paddle0.asm"
-    sty COLUP0
-    ;lda #$ff
-    sta GRP0
-    dey
+    sta TIM64T
+
+VisibleLoop
+
+    lda INTIM
     bne VisibleLoop
