@@ -1,23 +1,23 @@
-    lda #0
+    lda #05
     sta P0X
-    lda #10
-    sta P1X
     lda #20
+    sta P1X
+    lda #45
     sta M0X
-    lda #30
+    lda #80
     sta M1X
-    lda #40
+    lda #100
     sta BLX
 
-    lda #50
-    sta P0Y
     lda #60
-    sta P1Y
+    sta P0Y
     lda #70
-    sta M0Y
+    sta P1Y
     lda #80
-    sta M1Y
+    sta M0Y
     lda #90
+    sta M1Y
+    lda #100
     sta BLY
 
     lda #<STANDBMP
@@ -31,19 +31,20 @@
     lda #<PNKGRCOLU
     sta P0COLUPTR
     sta P1COLUPTR
+
     lda #>PNKGRCOLU
     sta P0COLUPTR+1
     sta P1COLUPTR+1
 
-    lda #2
+    lda #0
     sta ENAM0
     sta ENAM1
     sta ENABL
 
-    lda #$10
+    lda #$00
     sta NUSIZ0
     sta NUSIZ1
-    lda #$30
+    lda #$00
     sta CTRLPF
 
     lda #$A3
@@ -52,7 +53,6 @@
     sta COLUP1
     lda #$C3
     sta COLUPF
-    lda #$D3
-    sta GRP0
-    lda #$E3
-    sta GRP1
+
+    lda #1
+    sta VDELP0

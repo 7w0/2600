@@ -6,5 +6,7 @@
     sta TIM64T
 
 WaitOverscan
+    include "clearvisible.asm"
+
     lda INTIM
     bne WaitOverscan
