@@ -1,6 +1,3 @@
-    seg.u Variables
-    org $80
-
 P0X .byte
 P1X .byte
 M0X .byte
