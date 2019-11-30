@@ -21,10 +21,3 @@ P1COLUPTR .word
 
 P0COLUIDX .byte
 P1COLUIDX .byte
-
-Y0 .byte
-Y1 .byte
-Colp0 .byte
-colp1 .byte
-
-SPRITEH equ 8

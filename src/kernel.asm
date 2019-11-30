@@ -1,17 +1,20 @@
-    ldx #181
+    ldx #192
+    ldy #0
 
 Kernel
     txa
-    sta WSYNC
-    sta GRP0
-    sta GRP1
-    sta ENAM0
-    sta ENAM1
-    sta ENABL
-    sta NUSIZ0
-    sta NUSIZ1
-    sta CTRLPF
+    sta COLUPF
+    sty COLUBK
+    lda #$CC
+    sta PF0
+    lda #$CC
+    sta PF1
+    lda #$CC
+    sta PF2
 
+    sta WSYNC
+
+    iny
     dex
 
     bne Kernel

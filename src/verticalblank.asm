@@ -4,11 +4,6 @@
 
     include "setxs.asm"
 
-    lda P0Y
-    sta Y0
-    lda P1Y
-    sta Y1
-
     sta WSYNC
     sta HMOVE
 
