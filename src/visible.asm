@@ -5,7 +5,7 @@
     sta WSYNC
     sta TIM64T
 
-    include "kernel.asm"
+    include "kernelp0.asm"
 
 WaitVisible
     lda INTIM

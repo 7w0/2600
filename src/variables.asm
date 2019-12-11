@@ -21,3 +21,10 @@ P1COLUPTR .word
 
 P0COLUIDX .byte
 P1COLUIDX .byte
+
+P0YCNT .byte
+Temp .byte
+Bitp0 .byte
+Colp0 .byte
+
+SPRHEIGHT equ 16

@@ -2,6 +2,9 @@
     sta WSYNC
     sta TIM64T
 
+    lda P0Y
+    sta P0YCNT
+
     include "setxs.asm"
 
     sta WSYNC

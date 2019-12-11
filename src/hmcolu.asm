@@ -1,0 +1,17 @@
+    .byte #$FF
+    .byte #$F6
+    .byte #$86
+    .byte #$86
+    .byte #$86
+    .byte #$C2
+    .byte #$C2
+    .byte #$C2
+    .byte #$C2
+    .byte #$16
+    .byte #$16
+    .byte #$16
+    .byte #$18
+    .byte #$18
+    .byte #$18
+    .byte #$F2
+    .byte #$F4
