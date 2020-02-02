@@ -1,7 +1,7 @@
     align $100
 
-HATMAN
+PNKGRL
     include "standbmp.asm"
 
-HMCOLU
+PGCOLU
     include "punkgirlcolu.asm"

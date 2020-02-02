@@ -1,11 +1,11 @@
-    lda #<HATMAN
+    lda #<PNKGRL
     sta P0SPRIPTR
-    lda #>HATMAN
+    lda #>PNKGRL
     sta P0SPRIPTR+1
 
-    lda #<HMCOLU
+    lda #<PGCOLU
     sta P0COLUPTR
-    lda #>HMCOLU
+    lda #>PGCOLU
     sta P0COLUPTR+1
 
     lda #33
