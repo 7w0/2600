@@ -24,6 +24,13 @@ M0Y .byte
 M1Y .byte
 BLY .byte
 
+; Y Counters
+P0YC .byte
+P1YC .byte
+M0YC .byte
+M1YC .byte
+BLYC .byte
+
 ; X forces
 P0FX .byte
 P1FX .byte
@@ -42,7 +49,7 @@ P1SPR .word
 P0SPROFF .byte
 P1SPROFF .byte
 
-; Constants (prepend # when used)
+; Constants
 PH equ 3
 BALLHEIGHT equ 5
 GRAVITY equ 1
@@ -60,8 +67,6 @@ COLORBL equ $06
 Start
     CLEAN_START
 
-    jsr StartPositions
-
     lda #COLORP0
     sta COLUP0
     lda #COLORP1
@@ -72,14 +77,10 @@ Start
     lda #2
     sta ENABL
 
-    lda #0
-    tay
+    lda #1
+    sta VDELP0
 
-    lda (P0SPR),y
-    sta GRP0
-
-    lda (P1SPR),y
-    sta GRP1
+    jsr StartPositions
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Frame
@@ -104,6 +105,12 @@ XLoop
     sta WSYNC
     sta HMOVE
 
+    lda P0Y
+    sta P0YC
+
+    lda P1Y
+    sta P1YC
+
 ; Vertical Blank Wait
 WaitVBlank
     lda INTIM
@@ -118,7 +125,13 @@ WaitVBlank
     sta WSYNC
     sta TIM64T
 
-; Draw logic
+    lda #80
+    tax
+
+KernelLoop
+    jsr DrawPlayers
+    dex
+    bne KernelLoop
 
 ; Visible wait
 WaitVisible
@@ -197,13 +210,13 @@ ReadJoysticks
     lda #$10
     bit SWCHA
     bne DownP0
-    dec P0Y
+    inc P0Y
     jmp LeftP0
 DownP0
     lda #$20
     bit SWCHA
     bne LeftP0
-    inc P0Y
+    dec P0Y
 LeftP0
     lda #$40
     bit SWCHA
@@ -219,13 +232,13 @@ UpP1
     lda #$01
     bit SWCHA
     bne DownP1
-    dec P1Y
+    inc P1Y
     jmp LeftP1
 DownP1
     lda #$02
     bit SWCHA
     bne LeftP1
-    inc P1Y
+    dec P1Y
 LeftP1
     lda #$04
     bit SWCHA
@@ -240,6 +253,30 @@ RightP1
 EndJoy
     rts
 
+DrawPlayers
+    lda #PH
+    sec
+    isb P0YC
+    bcs DrawP0
+    lda #0
+DrawP0
+    tay
+    lda (P0SPR),y
+    sta GRP0
+
+    lda #PH
+    sec
+    isb P1YC
+    bcs DrawP1
+    lda #0
+DrawP1
+    tay
+    lda (P1SPR),y
+    sta WSYNC
+    sta GRP1
+
+    rts
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; DATA
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -247,9 +284,10 @@ EndJoy
     align $100
 
 PGFX0
-    .byte #%11000000
-    .byte #%11111110
+    .byte #0
     .byte #%01000100
+    .byte #%11111110
+    .byte #%11000000
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Finalize
