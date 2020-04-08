@@ -54,14 +54,13 @@ P0SPROFF .byte
 P1SPROFF .byte
 
 ; Constants
-PH equ 3
+PH equ 4
 BALLHEIGHT equ 5
 GRAVITY equ 1
 COLORP0 equ $36
 COLORP1 equ $98
 COLORBL equ $06
 VBLANKTIM64T equ 42 ;((((37 - 1) * 76) + 13) / 64) = 42.9531
-VISIBLETIME64T eq 229 ;(((192 * 76) + 13) / 64) = 228.203125
 
     seg Code
     org $f000
@@ -80,11 +79,12 @@ Start
     lda #COLORBL
     sta COLUPF
 
-    lda #2
-    sta ENABL
-
     lda #1
     sta VDELP0
+    sta VDELBL
+
+    lda #%00100011
+    sta CTRLPF
 
     jsr StartPositions
 
@@ -128,21 +128,48 @@ WaitVBlank
 ; A should already be zero? If somehow not, then lda #0 here
     sta VBLANK
 
-; Visible timer setup
-    lda #VISIBLETIME64T
-    sta WSYNC
-    sta TIM64T
-
-    ldx #96
+;; Visible 2-line kernel
+    ldx #192
 KernelLoop
-    jsr DrawPlayers
+; Ball
+    txa
+    sec
+    sbc BLY
+    cmp #BALLHEIGHT
+    bcc .DrawBall
+    lda #0
+    jmp .SetBall
+.DrawBall
+    lda #2
+.SetBall
+    sta ENABL
+; P0
+    txa
+    sec
+    sbc P0Y
+    cmp #PH
+    bcc .DrawP0
+    lda #0
+.DrawP0
+    tay
+    lda (P0SPR),y
+    sta GRP0
+; P1
+    txa
+    sec
+    sbc P1Y
+    cmp #PH
+    bcc .DrawP1
+    lda #0
+.DrawP1
+    tay
+    lda (P1SPR),y)
+    sta WSYNC
+    sta GRP1
     dex
     bne KernelLoop
 
-; Visible wait
-WaitVisible
-    lda INTIM
-    bne WaitVisible
+;; End Visible
 
 ; VBLANK on
     lda #2
@@ -179,7 +206,7 @@ StartPositions
     lda #147
     sta P1X
 
-    lda #160
+    lda #80
     sta P0Y
     sta P1Y
     sta BLY
@@ -286,10 +313,12 @@ DrawP1
 
 ApplyForces
     lda P0X
+    clc
     adc P0FX
     sta P0X
 
     lda P0Y
+    clc
     adc P0FY
     sta P0Y
     rts
