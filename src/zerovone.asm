@@ -28,13 +28,6 @@ M0Y .byte
 M1Y .byte
 BLY .byte
 
-; Y Counters
-P0YC .byte
-P1YC .byte
-M0YC .byte
-M1YC .byte
-BLYC .byte
-
 ; X forces
 P0FX .byte
 P1FX .byte
@@ -48,10 +41,6 @@ BLFY .byte
 ; Sprite Pointers
 P0SPR .word
 P1SPR .word
-
-; Sprite offsets
-P0SPROFF .byte
-P1SPROFF .byte
 
 ; Constants
 PH equ 4
@@ -95,7 +84,6 @@ Start
 Frame
     VERTICAL_SYNC
 
-
 ; Vertical Blank timer setup
     lda #VBLANKTIM64T
     sta WSYNC
@@ -113,19 +101,10 @@ XLoop
     sta WSYNC
     sta HMOVE
 
-; Init Y counters with current Y position
-    lda P0Y
-    sta P0YC
-    lda P1Y
-    sta P1YC
-
 ; Vertical Blank Wait
 WaitVBlank
     lda INTIM
     bne WaitVBlank
-
-; Turn off VBLANK
-; A should already be zero? If somehow not, then lda #0 here
     sta VBLANK
 
 ;; Visible 2-line kernel
@@ -206,9 +185,11 @@ StartPositions
     lda #147
     sta P1X
 
-    lda #80
+    lda #PH
     sta P0Y
     sta P1Y
+
+    lda #BALLHEIGHT
     sta BLY
 
     lda #8
@@ -285,30 +266,6 @@ RightP1
     bne EndJoy
     inc P1FX
 EndJoy
-    rts
-
-DrawPlayers
-    lda #PH
-    sec
-    isb P0YC
-    bcs DrawP0
-    lda #0
-DrawP0
-    tay
-    lda (P0SPR),y
-    sta GRP0
-
-    lda #PH
-    sec
-    isb P1YC
-    bcs DrawP1
-    lda #0
-DrawP1
-    tay
-    lda (P1SPR),y
-    sta WSYNC
-    sta GRP1
-
     rts
 
 ApplyForces
