@@ -3,6 +3,10 @@
     include "vcs.h"
     include "macro.h"
 
+;Battle at $0280
+;$1B vs $1C
+;0v1
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Variables
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -56,6 +60,8 @@ GRAVITY equ 1
 COLORP0 equ $36
 COLORP1 equ $98
 COLORBL equ $06
+VBLANKTIM64T equ 42 ;((((37 - 1) * 76) + 13) / 64) = 42.9531
+VISIBLETIME64T eq 229 ;(((192 * 76) + 13) / 64) = 228.203125
 
     seg Code
     org $f000
@@ -89,25 +95,27 @@ Start
 Frame
     VERTICAL_SYNC
 
+
 ; Vertical Blank timer setup
-    lda #42 ;(((36 * 76) + 13) / 64) = 42.9531
+    lda #VBLANKTIM64T
     sta WSYNC
     sta TIM64T
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Set X on all objects
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ldx #4
 XLoop
     lda P0X,x
     jsr SetX
     dex
     bpl XLoop
-
     sta WSYNC
     sta HMOVE
 
+; Init Y counters with current Y position
     lda P0Y
     sta P0YC
-
     lda P1Y
     sta P1YC
 
@@ -121,13 +129,11 @@ WaitVBlank
     sta VBLANK
 
 ; Visible timer setup
-    lda #229 ;(((192 * 76) + 13) / 64) = 228.203125
+    lda #VISIBLETIME64T
     sta WSYNC
     sta TIM64T
 
-    lda #80
-    tax
-
+    ldx #96
 KernelLoop
     jsr DrawPlayers
     dex
@@ -149,6 +155,7 @@ WaitVisible
 
 ; Overscan logic
     jsr ReadJoysticks
+    jsr ApplyForces
 
 ; Overscan wait
 WaitOverscan
@@ -172,7 +179,7 @@ StartPositions
     lda #147
     sta P1X
 
-    lda #0
+    lda #160
     sta P0Y
     sta P1Y
     sta BLY
@@ -210,46 +217,46 @@ ReadJoysticks
     lda #$10
     bit SWCHA
     bne DownP0
-    inc P0Y
+    inc P0FY
     jmp LeftP0
 DownP0
     lda #$20
     bit SWCHA
     bne LeftP0
-    dec P0Y
+    dec P0FY
 LeftP0
     lda #$40
     bit SWCHA
     bne RightP0
-    dec P0X
+    dec P0FX
     jmp UpP1
 RightP0
     lda #$80
     bit SWCHA
     bne UpP1
-    inc P0X
+    inc P0FX
 UpP1
     lda #$01
     bit SWCHA
     bne DownP1
-    inc P1Y
+    inc P1FY
     jmp LeftP1
 DownP1
     lda #$02
     bit SWCHA
     bne LeftP1
-    dec P1Y
+    dec P1FY
 LeftP1
     lda #$04
     bit SWCHA
     bne RightP1
-    dec P1X
+    dec P1FX
     jmp EndJoy
 RightP1
     lda #$08
     bit SWCHA
     bne EndJoy
-    inc P1X
+    inc P1FX
 EndJoy
     rts
 
@@ -277,14 +284,22 @@ DrawP1
 
     rts
 
+ApplyForces
+    lda P0X
+    adc P0FX
+    sta P0X
+
+    lda P0Y
+    adc P0FY
+    sta P0Y
+    rts
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; DATA
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    align $100
-
 PGFX0
-    .byte #0
+    .byte #%00000000
     .byte #%01000100
     .byte #%11111110
     .byte #%11000000
