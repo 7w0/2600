@@ -54,8 +54,8 @@ Start
     sta VDELP0
     sta VDELBL
 
-;; Set BL size 4 and PF to Score mode and Reflect
-    lda #%00100011
+;; Set BL size 2 and PF to Score mode and Reflect
+    lda #%00010011
     sta CTRLPF
 
 ;; Init pointers
@@ -79,6 +79,11 @@ Start
 
 ;; Set initial positions
     jsr StartPositions
+
+    lda #$06
+    sta COLUPF
+    lda #$D0
+    sta COLUBK
 
 ;; Frame
 Frame
@@ -119,14 +124,14 @@ WaitVBlank
 KernelLoop
 
 ;; Ball
-    lda #BallHeight
-    sta ENABL
+    ldy #0
+    lda #1
     sec
     isb LineCountBL
     bcc .NoBall
-    lda #2
-    sta ENABL
+    ldy #2
 .NoBall
+    sty ENABL
 
 ;; P0
     lda #PlayerHeight
@@ -191,17 +196,17 @@ WaitOverscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 StartPositions
-    lda #5
+    lda #0
     sta XP0
-    lda #79
+    lda #80
     sta XBL
-    lda #147
+    lda #152
     sta XP1
 
-    lda #242;#PlayerHeight
+    lda #169
     sta YP0
     sta YP1
-    lda #242;#BallHeight
+    lda #167
     sta YBL
 
     lda #8
@@ -237,7 +242,7 @@ ReadJoysticks
     lda #$10
     bit SWCHA
     bne .DownP0
-    cpx #254
+    cpx #255
     bcs .ApplyYVP0
     ldy #$01
     jmp .ApplyYVP0
@@ -246,7 +251,7 @@ ReadJoysticks
     lda #$20
     bit SWCHA
     bne .ApplyYVP0
-    cpx #175
+    cpx #170
     bcc .ApplyYVP0
     ldy #$FF
 
@@ -284,7 +289,7 @@ ReadJoysticks
     lda #$01
     bit SWCHA
     bne .DownP1
-    cpx #254
+    cpx #255
     bcs .ApplyYVP1
     ldy #$01
     jmp .ApplyYVP1
@@ -293,7 +298,7 @@ ReadJoysticks
     lda #$02
     bit SWCHA
     bne .ApplyYVP1
-    cpx #175
+    cpx #170
     bcc .ApplyYVP1
     ldy #$FF
 
