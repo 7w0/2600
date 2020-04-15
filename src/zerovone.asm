@@ -18,6 +18,14 @@ YM0 .byte
 YM1 .byte
 YBL .byte
 
+XFracP0 .byte
+XFracP1 .byte
+XFracBL .byte
+
+YFracP0 .byte
+YFracP1 .byte
+YFracBL .byte
+
 XVP0 .byte
 XVP1 .byte
 XVBL .byte
@@ -40,8 +48,14 @@ PtrSpriteP1 .word
 PtrColorP0 .word
 PtrColorP1 .word
 
+Speed equ 100
 PlayerHeight equ 9
 BallHeight equ 9
+PlayerMinX equ 1
+PlayerMaxX equ 152
+PlayerMinY equ 170
+PlayerMaxY equ 255
+MaxVelocityRollX equ 2
 
     seg Code
     org $f000
@@ -181,7 +195,6 @@ KernelLoop
 
 ; Overscan logic
     jsr ReadJoysticks
-    jsr ApplyForces
 
 ; Overscan wait
 WaitOverscan
@@ -234,136 +247,108 @@ SetXDivide
     rts
 
 ReadJoysticks
-;; Y P0
-    ldx YP0
-    ldy #0
-
 .UpP0
     lda #$10
     bit SWCHA
     bne .DownP0
-    cpx #255
-    bcs .ApplyYVP0
-    ldy #$01
-    jmp .ApplyYVP0
+    clc
+    lda YFracP0
+    adc #<Speed
+    sta YFracP0
+    lda YP0
+    adc #>Speed
+    sta YP0
 
 .DownP0
     lda #$20
     bit SWCHA
-    bne .ApplyYVP0
-    cpx #170
-    bcc .ApplyYVP0
-    ldy #$FF
-
-.ApplyYVP0
-    sty YVP0
-
-;; X P0
-    ldx XP0
-    ldy #0
+    bne .LeftP0
+    sec
+    lda YFracP0
+    sbc #<Speed
+    sta YFracP0
+    lda YP0
+    sbc #>Speed
+    sta YP0
 
 .LeftP0
     lda #$40
     bit SWCHA
     bne .RightP0
-    cpx #1
-    bcc .ApplyXVP0
-    ldy #$FF
-    jmp .ApplyXVP0
+    sec
+    lda XFracP0
+    sbc #<Speed
+    sta XFracP0
+    lda XP0
+    sbc #>Speed
+    sta XP0
+
 .RightP0
     lda #$80
     bit SWCHA
-    bne .ApplyXVP0
-    cpx #152
-    bcs .ApplyXVP0
-    ldy #$01
-
-.ApplyXVP0
-    sty XVP0
-
-;; Y P1
-    ldx YP1
-    ldy #0
+    bne .UpP1
+    clc
+    lda XFracP0
+    adc #<Speed
+    sta XFracP0
+    lda XP0
+    adc #>Speed
+    sta XP0
 
 .UpP1
     lda #$01
     bit SWCHA
     bne .DownP1
-    cpx #255
-    bcs .ApplyYVP1
-    ldy #$01
-    jmp .ApplyYVP1
+    clc
+    lda YFracP1
+    adc #<Speed
+    sta YFracP1
+    lda YP1
+    adc #>Speed
+    sta YP1
 
 .DownP1
     lda #$02
     bit SWCHA
-    bne .ApplyYVP1
-    cpx #170
-    bcc .ApplyYVP1
-    ldy #$FF
-
-.ApplyYVP1
-    sty YVP1
-
-;; X P1
-    ldx XP1
-    ldy #0
+    bne .LeftP1
+    sec
+    lda YFracP1
+    sbc #<Speed
+    sta YFracP1
+    lda YP1
+    sbc #>Speed
+    sta YP1
 
 .LeftP1
     lda #$04
     bit SWCHA
     bne .RightP1
-    cpx #1
-    bcc .ApplyXVP1
-    ldy #$FF
-    jmp .ApplyXVP1
+    sec
+    lda XFracP1
+    sbc #<Speed
+    sta XFracP1
+    lda XP1
+    sbc #>Speed
+    sta XP1
+
 .RightP1
     lda #$08
     bit SWCHA
-    bne .ApplyXVP1
-    cpx #152
-    bcs .ApplyXVP1
-    ldy #$01
-
-.ApplyXVP1
-    sty XVP1
-
-    rts
-
-ApplyForces
-; P0
-    lda XP0
+    bne .JoyDone
     clc
-    adc XVP0
-    sta XP0
-
-    lda YP0
-    clc
-    adc YVP0
-    sta YP0
-; P1
+    lda XFracP1
+    adc #<Speed
+    sta XFracP1
     lda XP1
-    clc
-    adc XVP1
+    adc #>Speed
     sta XP1
 
-    lda YP1
-    clc
-    adc YVP1
-    sta YP1
-; BL
-    lda XBL
-    clc
-    adc XVBL
-    sta XBL
-
-    lda YBL
-    clc
-    adc YVBL
-    sta YBL
+.JoyDone
     rts
 
 ;; DATA
+
+    align $100
 
 PlayerBitmap
     .byte #0
@@ -378,25 +363,25 @@ PlayerBitmap
 
 P0Colors
     .byte #0
-    .byte #$06;
-    .byte #$06;
-    .byte #$06;
-    .byte #$38;
-    .byte #$38;
-    .byte #$06;
-    .byte #$06;
-    .byte #$06;
+    .byte #$06
+    .byte #$06
+    .byte #$06
+    .byte #$38
+    .byte #$38
+    .byte #$06
+    .byte #$06
+    .byte #$06
 
 P1Colors
     .byte #0
-    .byte #$06;
-    .byte #$06;
-    .byte #$06;
-    .byte #$98;
-    .byte #$98;
-    .byte #$06;
-    .byte #$06;
-    .byte #$06;
+    .byte #$06
+    .byte #$06
+    .byte #$06
+    .byte #$98
+    .byte #$98
+    .byte #$06
+    .byte #$06
+    .byte #$06
 
 ;; Finalize
     org $fffc
