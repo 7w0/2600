@@ -6,33 +6,25 @@
     seg.u Variables
     org $80
 
-XP0 .byte
-XP1 .byte
+XP0 .word
+XP1 .word
 XM0 .byte
 XM1 .byte
-XBL .byte
+XBL .word
 
-YP0 .byte
-YP1 .byte
+YP0 .word
+YP1 .word
 YM0 .byte
 YM1 .byte
-YBL .byte
+YBL .word
 
-XFracP0 .byte
-XFracP1 .byte
-XFracBL .byte
+XVelP0 .word
+XVelP1 .word
+XVelBL .word
 
-YFracP0 .byte
-YFracP1 .byte
-YFracBL .byte
-
-XVP0 .byte
-XVP1 .byte
-XVBL .byte
-
-YVP0 .byte
-YVP1 .byte
-YVBL .byte
+XAccP0 .word
+XAccP1 .word
+XAccBL .word
 
 LineColorP0 .byte
 LineColorP1 .byte
@@ -48,17 +40,16 @@ PtrSpriteP1 .word
 PtrColorP0 .word
 PtrColorP1 .word
 
-Speed equ 100
-PlayerHeight equ 9
-BallHeight equ 9
+    seg Code
+    org $f000
+
+; Constants
+Gravity equ 100
+PlayerHeight equ 7
 PlayerMinX equ 1
 PlayerMaxX equ 152
 PlayerMinY equ 170
 PlayerMaxY equ 255
-MaxVelocityRollX equ 2
-
-    seg Code
-    org $f000
 
 Start
     CLEAN_START
@@ -110,22 +101,30 @@ Frame
     sta TIM64T
 
 ;; Set X on all objects
-    ldx #4
-SetXLoop
-    lda XP0,x
+    lda XP0+1
+    ldx #0
     jsr SetX
-    dex
-    bpl SetXLoop
+
+    lda XP1+1
+    ldx #1
+    jsr SetX
+
+    lda XBL+1
+    ldx #4
+    jsr SetX
+
     sta WSYNC
     sta HMOVE
 
 ; Init Y counters to object Y coordinates
-    ldx #4
-YCounterLoop
-    lda YP0,x
-    sta LineCountP0,x
-    dex
-    bpl YCounterLoop
+    lda YP0+1
+    sta LineCountP0
+
+    lda YP1+1
+    sta LineCountP1
+
+    lda YBL+1
+    sta LineCountBL
 
 ;; Vertical Blank Wait
 WaitVBlank
@@ -184,10 +183,12 @@ KernelLoop
     bne KernelLoop
 
 ;; Overscan
+
+; Turn on VBLANK
     lda #2
     sta VBLANK
 
-;; Overscan timer setup
+;; Timer setup
 ;; (((30 * 76) + 13) / 64) = 35.828125
     lda #36
     sta WSYNC
@@ -195,6 +196,23 @@ KernelLoop
 
 ; Overscan logic
     jsr ReadJoysticks
+
+;; Apply accleration
+    clc
+    lda XVelP0
+    adc XAccP0
+    sta XVelP0
+    lda XVelP0+1
+    adc XAccP0+1
+    sta XVelP0+1
+
+    clc
+    lda XP0
+    adc XVelP0
+    sta XP0
+    lda XP0+1
+    adc XVelP0+1
+    sta XP0+1
 
 ; Overscan wait
 WaitOverscan
@@ -210,17 +228,17 @@ WaitOverscan
 
 StartPositions
     lda #0
-    sta XP0
+    sta XP0+1
     lda #80
-    sta XBL
+    sta XBL+1
     lda #152
-    sta XP1
+    sta XP1+1
 
     lda #169
-    sta YP0
-    sta YP1
+    sta YP0+1
+    sta YP1+1
     lda #167
-    sta YBL
+    sta YBL+1
 
     lda #8
     sta REFP1
@@ -251,97 +269,49 @@ ReadJoysticks
     lda #$10
     bit SWCHA
     bne .DownP0
-    clc
-    lda YFracP0
-    adc #<Speed
-    sta YFracP0
-    lda YP0
-    adc #>Speed
-    sta YP0
 
 .DownP0
     lda #$20
     bit SWCHA
     bne .LeftP0
-    sec
-    lda YFracP0
-    sbc #<Speed
-    sta YFracP0
-    lda YP0
-    sbc #>Speed
-    sta YP0
 
+    ldx #0
+    ldy #0
 .LeftP0
     lda #$40
     bit SWCHA
     bne .RightP0
-    sec
-    lda XFracP0
-    sbc #<Speed
-    sta XFracP0
-    lda XP0
-    sbc #>Speed
-    sta XP0
-
+    ldy #10
+    ldx #$FF
+    jmp .ApplyXP0
 .RightP0
     lda #$80
     bit SWCHA
     bne .UpP1
-    clc
-    lda XFracP0
-    adc #<Speed
-    sta XFracP0
-    lda XP0
-    adc #>Speed
-    sta XP0
+    ldy #10
+.ApplyXP0
+    sty XAccP0
+    stx XAccP0+1
 
 .UpP1
     lda #$01
     bit SWCHA
     bne .DownP1
-    clc
-    lda YFracP1
-    adc #<Speed
-    sta YFracP1
-    lda YP1
-    adc #>Speed
-    sta YP1
 
 .DownP1
     lda #$02
     bit SWCHA
     bne .LeftP1
-    sec
-    lda YFracP1
-    sbc #<Speed
-    sta YFracP1
-    lda YP1
-    sbc #>Speed
-    sta YP1
 
 .LeftP1
     lda #$04
     bit SWCHA
     bne .RightP1
-    sec
-    lda XFracP1
-    sbc #<Speed
-    sta XFracP1
-    lda XP1
-    sbc #>Speed
-    sta XP1
 
 .RightP1
     lda #$08
     bit SWCHA
     bne .JoyDone
-    clc
-    lda XFracP1
-    adc #<Speed
-    sta XFracP1
-    lda XP1
-    adc #>Speed
-    sta XP1
 
 .JoyDone
     rts
@@ -354,10 +324,8 @@ PlayerBitmap
     .byte #0
     .byte #%00011000
     .byte #%00100100
-    .byte #%01000010
     .byte #%01011010
     .byte #%01111110
-    .byte #%01000010
     .byte #%00100100
     .byte #%00011000
 
@@ -365,10 +333,8 @@ P0Colors
     .byte #0
     .byte #$06
     .byte #$06
-    .byte #$06
     .byte #$38
     .byte #$38
-    .byte #$06
     .byte #$06
     .byte #$06
 
@@ -376,10 +342,8 @@ P1Colors
     .byte #0
     .byte #$06
     .byte #$06
-    .byte #$06
     .byte #$98
     .byte #$98
-    .byte #$06
     .byte #$06
     .byte #$06
 
