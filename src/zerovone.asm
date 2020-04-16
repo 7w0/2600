@@ -26,6 +26,14 @@ XAccP0 .word
 XAccP1 .word
 XAccBL .word
 
+YVelP0 .word
+YVelP1 .word
+YVelBL .word
+
+YAccP0 .word
+YAccP1 .word
+YAccBL .word
+
 LineColorP0 .byte
 LineColorP1 .byte
 
@@ -214,6 +222,22 @@ KernelLoop
     adc XVelP0+1
     sta XP0+1
 
+    clc
+    lda YVelP0
+    adc YAccP0
+    sta YVelP0
+    lda YVelP0+1
+    adc YAccP0+1
+    sta YVelP0+1
+
+    clc
+    lda YP0
+    adc YVelP0
+    sta YP0
+    lda YP0+1
+    adc YVelP0+1
+    sta YP0+1
+
 ; Overscan wait
 WaitOverscan
     lda INTIM
@@ -265,15 +289,24 @@ SetXDivide
     rts
 
 ReadJoysticks
+    ldx #0
+    ldy #0
 .UpP0
     lda #$10
     bit SWCHA
     bne .DownP0
-
+    ldy #$0A
+    ldx #$00
+    jmp .ApplyYP0
 .DownP0
     lda #$20
     bit SWCHA
-    bne .LeftP0
+    bne .ApplyYP0
+    ldy #$F9
+    ldx #$FF
+.ApplyYP0
+    sty YAccP0
+    stx YAccP0+1
 
     ldx #0
     ldy #0
@@ -281,14 +314,15 @@ ReadJoysticks
     lda #$40
     bit SWCHA
     bne .RightP0
-    ldy #10
+    ldy #$F9
     ldx #$FF
     jmp .ApplyXP0
 .RightP0
     lda #$80
     bit SWCHA
-    bne .UpP1
-    ldy #10
+    bne .ApplyXP0
+    ldy #$0A
+    ldx #$00
 .ApplyXP0
     sty XAccP0
     stx XAccP0+1
