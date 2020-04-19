@@ -18,21 +18,23 @@ YM0 .byte
 YM1 .byte
 YBL .word
 
+XDirP0 .byte
+XDirP1 .byte
+XDirBL .byte
+
+YDirP0 .byte
+YDirP1 .byte
+YDirBL .byte
+
 XVelP0 .word
 XVelP1 .word
 XVelBL .word
-
-XAccP0 .word
-XAccP1 .word
-XAccBL .word
 
 YVelP0 .word
 YVelP1 .word
 YVelBL .word
 
-YAccP0 .word
-YAccP1 .word
-YAccBL .word
+TempWord .word
 
 LineColorP0 .byte
 LineColorP1 .byte
@@ -58,6 +60,11 @@ PlayerMinX equ 1
 PlayerMaxX equ 152
 PlayerMinY equ 170
 PlayerMaxY equ 255
+RollAccX equ 10
+RollAccY equ 10
+BoostAccX equ 15
+BoostAccY equ 15
+GroundFriction equ 5
 
 Start
     CLEAN_START
@@ -203,40 +210,7 @@ KernelLoop
     sta TIM64T
 
 ; Overscan logic
-    jsr ReadJoysticks
-
-;; Apply accleration
-    clc
-    lda XVelP0
-    adc XAccP0
-    sta XVelP0
-    lda XVelP0+1
-    adc XAccP0+1
-    sta XVelP0+1
-
-    clc
-    lda XP0
-    adc XVelP0
-    sta XP0
-    lda XP0+1
-    adc XVelP0+1
-    sta XP0+1
-
-    clc
-    lda YVelP0
-    adc YAccP0
-    sta YVelP0
-    lda YVelP0+1
-    adc YAccP0+1
-    sta YVelP0+1
-
-    clc
-    lda YP0
-    adc YVelP0
-    sta YP0
-    lda YP0+1
-    adc YVelP0+1
-    sta YP0+1
+    jsr MovePlayers
 
 ; Overscan wait
 WaitOverscan
@@ -251,14 +225,14 @@ WaitOverscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 StartPositions
-    lda #0
+    lda #PlayerMinX
     sta XP0+1
     lda #80
     sta XBL+1
-    lda #152
+    lda #PlayerMaxX
     sta XP1+1
 
-    lda #169
+    lda #PlayerMinY
     sta YP0+1
     sta YP1+1
     lda #167
@@ -266,6 +240,12 @@ StartPositions
 
     lda #8
     sta REFP1
+
+    lda #$01
+    sta XDirP0
+
+    lda #$00
+    sta YDirP0
 
     rts
 
@@ -288,66 +268,156 @@ SetXDivide
     sta HMP0,x
     rts
 
-ReadJoysticks
-    ldx #0
-    ldy #0
-.UpP0
+MovePlayers
+; P0 UDLR 10 20 40 80
+; P1 UDLR 01 02 04 08
+; bit SWCHA bne
+
+; Moving horizontally?
+    lda XVelP0+0
+    eor XVelP0+1
+    beq .CheckBounds
+
+; Apply current velocity
+    lda XVelP0+1
+    bmi .NegativeVelocityP0+1
+
+; Positive velocity, subtract friction, add velocity
+
+    sec
+    lda XVelP0+0
+    sbc #GroundFriction
+    sta XVelP0+0
+    lda XVelP0+1
+    sbc #0
+    sta XVelP0+1
+    bcs .ApplyPositveVelocity
+    lda #0
+    sta XVelP0+0
+    sta XVelP0+1
+
+.ApplyPositveVelocity
+    clc
+    lda XP0+0
+    adc XVelP0+0
+    sta XP0+0
+    lda XP0+1
+    adc XVelP0+1
+    sta XP0+1
+    jmp .CheckBounds
+
+; Negative velocity, add friction, subtract absolute velocity
+
+.NegativeVelocityP0
+    clc
+    lda XVelP0+0
+    adc #GroundFriction
+    sta XVelP0+0
+    lda XVelP0+1
+    adc #0
+    sta XVelP0+1
+    bcs .ApplyNegativeVelocity
+    lda #0
+    sta XVelP0+0
+    sta XVelP0+1
+.ApplyNegativeVelocity
+    sec
+    lda #0
+    sbc XVelP0+0
+    sta TempWord+0
+    lda #0
+    sbc XVelP0+1
+    sta TempWord+1
+
+    sec
+    lda XP0+0
+    sbc TempWord+0
+    sta XP0+0
+    lda XP0+1
+    sbc TempWord+1
+    sta XP0+1
+
+; Check if moved out of bounds
+
+.CheckBounds
+    lda XP0+1
+    ldx #PlayerMaxX
+    sec
+    cmp #PlayerMaxX
+    bcs .ForceX
+    ldx #PlayerMinX
+    sec
+    cmp #PlayerMinX
+    bcc .ForceX
+    jmp .CheckY
+.ForceX
+    lda #0
+    sta XP0+0
+    stx XP0+1
+
+.CheckY
+    lda YP0+1
+    ldy #PlayerMaxY
+    sec
+    cmp #PlayerMaxY
+    bcs .ForceY
+    ldy #PlayerMinY
+    sec
+    cmp #PlayerMinY
+    bcc .ForceY
+    jmp .CheckBoundsDone
+.ForceY
+    lda #0
+    sta YP0+0
+    sty YP0+1
+.CheckBoundsDone
+
+; Ground?
+    lda YP0+1
+    cmp #PlayerMinY
+    bne .NotOnGround
+    ; On the ground
     lda #$10
     bit SWCHA
-    bne .DownP0
-    ldy #$0A
-    ldx #$00
-    jmp .ApplyYP0
-.DownP0
-    lda #$20
-    bit SWCHA
-    bne .ApplyYP0
-    ldy #$F9
-    ldx #$FF
-.ApplyYP0
-    sty YAccP0
-    stx YAccP0+1
+    bne .NotRolling
+    ; Direction?
+    lda XDirP0
+    bmi .RollLeft
 
-    ldx #0
-    ldy #0
-.LeftP0
-    lda #$40
-    bit SWCHA
-    bne .RightP0
-    ldy #$F9
-    ldx #$FF
-    jmp .ApplyXP0
-.RightP0
-    lda #$80
-    bit SWCHA
-    bne .ApplyXP0
-    ldy #$0A
-    ldx #$00
-.ApplyXP0
-    sty XAccP0
-    stx XAccP0+1
+    clc
+    lda XVelP0+0
+    adc #RollAccX
+    sta XVelP0+0
+    lda XVelP0+1
+    adc #0
+    sta XVelP0+1
 
-.UpP1
-    lda #$01
-    bit SWCHA
-    bne .DownP1
+    jmp .MoveDone
+.RollLeft
 
-.DownP1
-    lda #$02
-    bit SWCHA
-    bne .LeftP1
+    sec
+    lda XVelP0+0
+    sbc #RollAccX
+    sta XVelP0+0
+    lda XVelP0+1
+    sbc #0
+    sta XVelP0+1
+    jmp .MoveDone
 
-.LeftP1
-    lda #$04
-    bit SWCHA
-    bne .RightP1
+.GoUpLeftWall
+    jmp .MoveDone
+.NotRolling
 
-.RightP1
-    lda #$08
-    bit SWCHA
-    bne .JoyDone
-
-.JoyDone
+.NotOnGround
+    lda XP0+1
+    cmp #PlayerMinX
+    beq .OnWall
+    cmp #PlayerMaxX
+    beq .OnWall
+    jmp .NotOnWall
+.OnWall
+.NotOnWall
+.MoveDone
     rts
 
 ;; DATA
