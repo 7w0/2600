@@ -6,6 +6,27 @@
     seg.u Variables
     org $80
 
+; X
+; Y
+
+; XDec
+; YDec
+
+; XDir
+; YDir
+
+; XVel
+; YVel
+
+; XVelDec
+; YVelDec
+
+; MinX
+; MinY
+
+; MaxX
+; MaxY
+
 XP0 .word
 XP1 .word
 XM0 .byte
@@ -54,7 +75,7 @@ PtrColorP1 .word
     org $f000
 
 ; Constants
-Gravity equ 100
+Gravity equ 5
 PlayerHeight equ 7
 PlayerMinX equ 1
 PlayerMaxX equ 152
@@ -62,9 +83,9 @@ PlayerMinY equ 170
 PlayerMaxY equ 255
 RollAccX equ 10
 RollAccY equ 10
+RollDecX equ 5
 BoostAccX equ 15
 BoostAccY equ 15
-GroundFriction equ 5
 
 Start
     CLEAN_START
@@ -244,7 +265,7 @@ StartPositions
     lda #$01
     sta XDirP0
 
-    lda #$00
+    lda #$01
     sta YDirP0
 
     rts
@@ -273,151 +294,38 @@ MovePlayers
 ; P1 UDLR 01 02 04 08
 ; bit SWCHA bne
 
-; Moving horizontally?
-    lda XVelP0+0
-    eor XVelP0+1
-    beq .CheckBounds
-
-; Apply current velocity
+; Apply deceleration to velocity. If past 0, set to 0
+; i.e. don't start moving in opposite direction.
     lda XVelP0+1
-    bmi .NegativeVelocityP0+1
-
-; Positive velocity, subtract friction, add velocity
-
+    bmi .NegativeVelocityXP0
+    ora XVelP0+0
+    beq .XDecelerationDoneP0
+.PositiveXVelocityP0
     sec
     lda XVelP0+0
-    sbc #GroundFriction
+    sbc #RollDecX
     sta XVelP0+0
     lda XVelP0+1
     sbc #0
-    sta XVelP0+1
-    bcs .ApplyPositveVelocity
+    bpl .StillPositiveXP0
     lda #0
     sta XVelP0+0
+.StillPositiveXP0
     sta XVelP0+1
-
-.ApplyPositveVelocity
-    clc
-    lda XP0+0
-    adc XVelP0+0
-    sta XP0+0
-    lda XP0+1
-    adc XVelP0+1
-    sta XP0+1
-    jmp .CheckBounds
-
-; Negative velocity, add friction, subtract absolute velocity
-
-.NegativeVelocityP0
+    jmp .XDecelerationDoneP0
+.NegativeVelocityXP0
     clc
     lda XVelP0+0
-    adc #GroundFriction
+    adc #RollDecX
     sta XVelP0+0
     lda XVelP0+1
     adc #0
-    sta XVelP0+1
-    bcs .ApplyNegativeVelocity
+    bmi .StillNegativeXP0
     lda #0
     sta XVelP0+0
+.StillNegativeXP0
     sta XVelP0+1
-.ApplyNegativeVelocity
-    sec
-    lda #0
-    sbc XVelP0+0
-    sta TempWord+0
-    lda #0
-    sbc XVelP0+1
-    sta TempWord+1
-
-    sec
-    lda XP0+0
-    sbc TempWord+0
-    sta XP0+0
-    lda XP0+1
-    sbc TempWord+1
-    sta XP0+1
-
-; Check if moved out of bounds
-
-.CheckBounds
-    lda XP0+1
-    ldx #PlayerMaxX
-    sec
-    cmp #PlayerMaxX
-    bcs .ForceX
-    ldx #PlayerMinX
-    sec
-    cmp #PlayerMinX
-    bcc .ForceX
-    jmp .CheckY
-.ForceX
-    lda #0
-    sta XP0+0
-    stx XP0+1
-
-.CheckY
-    lda YP0+1
-    ldy #PlayerMaxY
-    sec
-    cmp #PlayerMaxY
-    bcs .ForceY
-    ldy #PlayerMinY
-    sec
-    cmp #PlayerMinY
-    bcc .ForceY
-    jmp .CheckBoundsDone
-.ForceY
-    lda #0
-    sta YP0+0
-    sty YP0+1
-.CheckBoundsDone
-
-; Ground?
-    lda YP0+1
-    cmp #PlayerMinY
-    bne .NotOnGround
-    ; On the ground
-    lda #$10
-    bit SWCHA
-    bne .NotRolling
-    ; Direction?
-    lda XDirP0
-    bmi .RollLeft
-
-    clc
-    lda XVelP0+0
-    adc #RollAccX
-    sta XVelP0+0
-    lda XVelP0+1
-    adc #0
-    sta XVelP0+1
-
-    jmp .MoveDone
-.RollLeft
-
-    sec
-    lda XVelP0+0
-    sbc #RollAccX
-    sta XVelP0+0
-    lda XVelP0+1
-    sbc #0
-    sta XVelP0+1
-    jmp .MoveDone
-
-.GoUpLeftWall
-    jmp .MoveDone
-.NotRolling
-
-.NotOnGround
-    lda XP0+1
-    cmp #PlayerMinX
-    beq .OnWall
-    cmp #PlayerMaxX
-    beq .OnWall
-    jmp .NotOnWall
-.OnWall
-.NotOnWall
-.MoveDone
+.XDecelerationDoneP0
     rts
 
 ;; DATA
