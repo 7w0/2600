@@ -75,6 +75,15 @@ YMaxBL .byte
 
 TempWord .word
 
+; D0:0 Roll
+; D1:0 Boost
+; D2:0 Direction -Clockwise
+; D3:0 Direction +Clockwise
+; D7:0 Jump
+; D6:0 Flip
+FlagsP0 .byte ; D0:0 = Roll
+FlagsP1 .byte
+
 LineColorP0 .byte
 LineColorP1 .byte
 
@@ -143,6 +152,9 @@ Start
     lda #$D0
     sta COLUBK
 
+    lda #$ff
+    sta FlagsP0
+    sta FlagsP1
 ;; Frame
 Frame
     VERTICAL_SYNC
@@ -187,7 +199,7 @@ WaitVBlank
 
 ;; Visible
     ldx #96
-KernelLoop
+DisplayLoop
 
 ;; Ball
     ldy #0
@@ -233,7 +245,7 @@ KernelLoop
     sty GRP1
 
     dex
-    bne KernelLoop
+    bne DisplayLoop
 
 ;; Overscan
 
@@ -249,6 +261,7 @@ KernelLoop
 
 ; Overscan logic
     ldx #0
+    jsr HandleInput
     jsr CalculateDestination
 
 ; Overscan wait
@@ -305,6 +318,40 @@ SetXDivide
     asl
     sta RESP0,x
     sta HMP0,x
+    rts
+
+HandleInput
+    ; P0
+    lda SWCHA
+    lsr
+    lsr
+    lsr
+    lsr
+    ldx INPT4
+    bpl .ButtonDownP0
+    ora #$10
+.ButtonDownP0
+    sta TempWord+0
+
+    lda FlagsP0
+    and #$e0
+    ora TempWord+0
+    sta FlagsP0
+
+    ; P1
+    lda SWCHA
+    and #$0f
+    ldx INPT5
+    bpl .ButtonDownP1
+    ora #$10
+.ButtonDownP1
+    sta TempWord+0
+
+    lda FlagsP1
+    and #$e0
+    ora TempWord+0
+    sta FlagsP1
+
     rts
 
 CalculateDestination
