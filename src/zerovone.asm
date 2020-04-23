@@ -6,54 +6,72 @@
     seg.u Variables
     org $80
 
-; X
-; Y
-
-; XDec
-; YDec
-
-; XDir
-; YDir
-
-; XVel
-; YVel
-
-; XVelDec
-; YVelDec
-
-; MinX
-; MinY
-
-; MaxX
-; MaxY
-
-XP0 .word
-XP1 .word
-XM0 .byte
-XM1 .byte
-XBL .word
-
-YP0 .word
-YP1 .word
-YM0 .byte
-YM1 .byte
-YBL .word
-
+XP0 .byte
+XP1 .byte
+XBL .byte
+YP0 .byte
+YP1 .byte
+YBL .byte
+XDecP0 .byte
+XDecP1 .byte
+XDecBL .byte
+YDecP0 .byte
+YDecP1 .byte
+YDecBL .byte
+XDestP0 .byte
+XDestP1 .byte
+XDestBL .byte
+YDestP0 .byte
+YDestP1 .byte
+YDestBL .byte
+XDestDecP0 .byte
+XDestDecP1 .byte
+XDestDecBL .byte
+YDestDecP0 .byte
+YDestDecP1 .byte
+YDestDecBL .byte
 XDirP0 .byte
 XDirP1 .byte
 XDirBL .byte
-
 YDirP0 .byte
 YDirP1 .byte
 YDirBL .byte
-
-XVelP0 .word
-XVelP1 .word
-XVelBL .word
-
-YVelP0 .word
-YVelP1 .word
-YVelBL .word
+XAccP0 .byte
+XAccP1 .byte
+XAccBL .byte
+YAccP0 .byte
+YAccP1 .byte
+YAccBL .byte
+XAccDecP0 .byte
+XAccDecP1 .byte
+XAccDecBL .byte
+YAccDecP0 .byte
+YAccDecP1 .byte
+YAccDecBL .byte
+XVelP0 .byte
+XVelP1 .byte
+XVelBL .byte
+YVelP0 .byte
+YVelP1 .byte
+YVelBL .byte
+XVelDecP0 .byte
+XVelDecP1 .byte
+XVelDecBL .byte
+YVelDecP0 .byte
+YVelDecP1 .byte
+YVelDecBL .byte
+XMinP0 .byte
+XMinP1 .byte
+XMinBL .byte
+YMinP0 .byte
+YMinP1 .byte
+YMinBL .byte
+XMaxP0 .byte
+XMaxP1 .byte
+XMaxBL .byte
+YMaxP0 .byte
+YMaxP1 .byte
+YMaxBL .byte
 
 TempWord .word
 
@@ -74,7 +92,6 @@ PtrColorP1 .word
     seg Code
     org $f000
 
-; Constants
 Gravity equ 5
 PlayerHeight equ 7
 PlayerMinX equ 1
@@ -137,15 +154,15 @@ Frame
     sta TIM64T
 
 ;; Set X on all objects
-    lda XP0+1
+    lda XP0
     ldx #0
     jsr SetX
 
-    lda XP1+1
+    lda XP1
     ldx #1
     jsr SetX
 
-    lda XBL+1
+    lda XBL
     ldx #4
     jsr SetX
 
@@ -153,13 +170,13 @@ Frame
     sta HMOVE
 
 ; Init Y counters to object Y coordinates
-    lda YP0+1
+    lda YP0
     sta LineCountP0
 
-    lda YP1+1
+    lda YP1
     sta LineCountP1
 
-    lda YBL+1
+    lda YBL
     sta LineCountBL
 
 ;; Vertical Blank Wait
@@ -231,7 +248,8 @@ KernelLoop
     sta TIM64T
 
 ; Overscan logic
-    jsr MovePlayers
+    ldx #0
+    jsr CalculateDestination
 
 ; Overscan wait
 WaitOverscan
@@ -247,17 +265,17 @@ WaitOverscan
 
 StartPositions
     lda #PlayerMinX
-    sta XP0+1
+    sta XP0
     lda #80
-    sta XBL+1
+    sta XBL
     lda #PlayerMaxX
-    sta XP1+1
+    sta XP1
 
     lda #PlayerMinY
-    sta YP0+1
-    sta YP1+1
+    sta YP0
+    sta YP1
     lda #167
-    sta YBL+1
+    sta YBL
 
     lda #8
     sta REFP1
@@ -289,46 +307,40 @@ SetXDivide
     sta HMP0,x
     rts
 
-MovePlayers
-; P0 UDLR 10 20 40 80
-; P1 UDLR 01 02 04 08
-; bit SWCHA bne
-
-; Apply deceleration to velocity. If past 0, set to 0
-; i.e. don't start moving in opposite direction.
-    lda XVelP0+1
-    bmi .NegativeVelocityXP0
-    ora XVelP0+0
-    beq .XDecelerationDoneP0
-.PositiveXVelocityP0
-    sec
-    lda XVelP0+0
-    sbc #RollDecX
-    sta XVelP0+0
-    lda XVelP0+1
-    sbc #0
-    bpl .StillPositiveXP0
-    lda #0
-    sta XVelP0+0
-.StillPositiveXP0
-    sta XVelP0+1
-    jmp .XDecelerationDoneP0
-.NegativeVelocityXP0
+CalculateDestination
     clc
-    lda XVelP0+0
-    adc #RollDecX
-    sta XVelP0+0
-    lda XVelP0+1
-    adc #0
-    bmi .StillNegativeXP0
-    lda #0
-    sta XVelP0+0
-.StillNegativeXP0
-    sta XVelP0+1
-.XDecelerationDoneP0
-    rts
+    lda XVelDecP0,x
+    adc XAccDecP0,x
+    sta TempWord+0
+    lda XVelP0,x
+    adc XAccP0,x
+    sta TempWord+1
 
-;; DATA
+    clc
+    lda XDecP0,x
+    adc TempWord+0
+    sta XDestDecP0,x
+    lda XP0,x
+    adc TempWord+1
+    sta XDestP0,x
+
+    clc
+    lda YVelDecP0,x
+    adc YAccDecP0,x
+    sta TempWord+0
+    lda YVelP0,x
+    adc YAccP0,x
+    sta TempWord+1
+
+    clc
+    lda YDecP0,x
+    adc TempWord+0
+    sta YDestDecP0,x
+    lda YP0,x
+    adc TempWord+1
+    sta YDestP0,x
+
+    rts
 
     align $100
 
@@ -359,7 +371,6 @@ P1Colors
     .byte #$06
     .byte #$06
 
-;; Finalize
     org $fffc
 
     .word Start
