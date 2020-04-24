@@ -79,9 +79,8 @@ TempWord .word
 ; D1:0 Boost
 ; D2:0 Direction -Clockwise
 ; D3:0 Direction +Clockwise
-; D7:0 Jump
-; D6:0 Flip
-FlagsP0 .byte ; D0:0 = Roll
+; D4:0 Jump
+FlagsP0 .byte
 FlagsP1 .byte
 
 LineColorP0 .byte
@@ -260,9 +259,11 @@ DisplayLoop
     sta TIM64T
 
 ; Overscan logic
-    ldx #0
     jsr HandleInput
+    ldx #0
+    jsr UpdatePlayers
     jsr CalculateDestination
+    jsr ApplyDestination
 
 ; Overscan wait
 WaitOverscan
@@ -354,7 +355,63 @@ HandleInput
 
     rts
 
+UpdatePlayers
+    lda #$04
+    and FlagsP0,x
+    bne .CheckRight
+    lda #$ff
+    sta XDirP0
+    jmp .CheckAcceleration
+.CheckRight
+    lda #$08
+    and FlagsP0,x
+    bne .CheckAcceleration
+    lda #$01
+    sta XDirP0
+.CheckAcceleration
+    lda #$01
+    and FlagsP0,x
+    bne .CheckBoosting
+.CheckBoosting
+    lda #$02
+    and FlagsP0,x
+    bne .NotAccelerating
+.NotAccelerating
+    lda #$01
+    and FlagsP0,x
+    bne .NotRolling
+    ; On surface?
+    lda YP0,x
+    cmp #PlayerMinY
+    beq .OnSurface
+    lda XP0,x
+    cmp #PlayerMinX
+    bne .OnSurface
+    cmp #PlayerMaxX
+    bne .OnSurface
+    jmp .InAir
+.OnSurface
+    lda XAccDecP0,x
+    adc #<RollAccX
+    sta XAccDecP0,x
+    lda XAccP0,x
+    adc #>RollAccX
+    sta XAccP0,x
+    jmp .NotBoosting
+.NotRolling
+    lda #02
+    and FlagsP0,x
+    bne .NotBoosting
+.NotBoosting
+    jmp .EndUpdatePlayer
+.InAir
+.EndUpdatePlayer
+    rts
+
 CalculateDestination
+
+    ldx #2
+.ObjectLoop
     clc
     lda XVelDecP0,x
     adc XAccDecP0,x
@@ -387,6 +444,30 @@ CalculateDestination
     adc TempWord+1
     sta YDestP0,x
 
+    dex
+    bpl .ObjectLoop
+
+    rts
+
+ApplyDestination
+
+    ldx #2
+.DestLoop
+    lda XDestDecP0,x
+    sta XDecP0,x
+
+    lda XDestP0,x
+    sta XP0,x
+
+    lda YDestDecP0,x
+    sta YDecP0,x
+
+    lda YDestP0,x
+    sta YP0,x
+
+    dex
+    bpl .DestLoop
+
     rts
 
     align $100
@@ -417,6 +498,11 @@ P1Colors
     .byte #$98
     .byte #$06
     .byte #$06
+
+RollTableX
+    .byte 10,8,6,4,2,0, -2, -4,-6,-8,-10,-8,-6,-4,-2,  0, 2, 4, 6, 8
+RollTableY
+    .byte 0, 2,4,6,8,10, 8,  6, 4, 2,  0,-2,-4,-6,-8,-10,-8,-6,-4,-2
 
     org $fffc
 
