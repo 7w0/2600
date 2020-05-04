@@ -30,12 +30,10 @@ XDestDecBL .byte
 YDestDecP0 .byte
 YDestDecP1 .byte
 YDestDecBL .byte
-XDirP0 .byte
-XDirP1 .byte
-XDirBL .byte
-YDirP0 .byte
-YDirP1 .byte
-YDirBL .byte
+DirP0 .byte
+DirP1 .byte
+DirDecP0 .byte
+DirDecP1 .byte
 XAccP0 .byte
 XAccP1 .byte
 XAccBL .byte
@@ -111,6 +109,7 @@ RollAccY equ 10
 RollDecX equ 5
 BoostAccX equ 15
 BoostAccY equ 15
+TurnRate equ 10
 
 Start
     CLEAN_START
@@ -295,10 +294,7 @@ StartPositions
     sta REFP1
 
     lda #$01
-    sta XDirP0
-
-    lda #$01
-    sta YDirP0
+    sta DirP0
 
     rts
 
@@ -356,18 +352,30 @@ HandleInput
     rts
 
 UpdatePlayers
+.CheckLeft
     lda #$04
     and FlagsP0,x
     bne .CheckRight
-    lda #$ff
-    sta XDirP0
+    sec
+    lda DirDecP0,x
+    sbc #TurnRate
+    sta DirDecP0,x
+    lda DirP0,x
+    sbc #0
+    sta DirP0,x
     jmp .CheckAcceleration
 .CheckRight
     lda #$08
     and FlagsP0,x
     bne .CheckAcceleration
-    lda #$01
-    sta XDirP0
+    clc
+    lda DirDecP0,x
+    adc #TurnRate
+    sta DirDecP0,x
+    lda DirP0,x
+    adc #0
+    sta DirP0,x
+
 .CheckAcceleration
     lda #$01
     and FlagsP0,x
@@ -411,7 +419,7 @@ UpdatePlayers
 CalculateDestination
 
     ldx #2
-.ObjectLoop
+.CalcDestLoop
     clc
     lda XVelDecP0,x
     adc XAccDecP0,x
@@ -445,14 +453,14 @@ CalculateDestination
     sta YDestP0,x
 
     dex
-    bpl .ObjectLoop
+    bpl .CalcDestLoop
 
     rts
 
 ApplyDestination
 
     ldx #2
-.DestLoop
+.ApplyDestLoop
     lda XDestDecP0,x
     sta XDecP0,x
 
@@ -466,7 +474,7 @@ ApplyDestination
     sta YP0,x
 
     dex
-    bpl .DestLoop
+    bpl .ApplyDestLoop
 
     rts
 
@@ -500,9 +508,162 @@ P1Colors
     .byte #$06
 
 RollTableX
-    .byte 10,8,6,4,2,0, -2, -4,-6,-8,-10,-8,-6,-4,-2,  0, 2, 4, 6, 8
+    .byte 10,8,6,4,2, 0,-2, -4,-6,-8,-10,-8,-6,-4,-2,  0, 2, 4, 6, 8
 RollTableY
-    .byte 0, 2,4,6,8,10, 8,  6, 4, 2,  0,-2,-4,-6,-8,-10,-8,-6,-4,-2
+    .byte  0,2,4,6,8,10, 8,  6, 4, 2,  0,-2,-4,-6,-8,-10,-8,-6,-4,-2
+
+;---Graphics Data from PlayerPal 2600---
+
+Frame0
+    .byte #0
+    .byte #%00011000;--
+    .byte #%00111100;--
+    .byte #%01000010;--
+    .byte #%01000010;--
+    .byte #%00100100;--
+    .byte #%00011000;--
+Frame1
+    .byte #0
+    .byte #%00011000;--
+    .byte #%00101100;--
+    .byte #%01000010;--
+    .byte #%01000010;--
+    .byte #%00100100;--
+    .byte #%00011000;--
+Frame2
+    .byte #0
+    .byte #%00011000;--
+    .byte #%00101100;--
+    .byte #%01000110;--
+    .byte #%01000010;--
+    .byte #%00100100;--
+    .byte #%00011000;--
+Frame3
+    .byte #0
+    .byte #%00011000;--
+    .byte #%00100100;--
+    .byte #%01000110;--
+    .byte #%01000010;--
+    .byte #%00100100;--
+    .byte #%00011000;--
+Frame4
+    .byte #0
+    .byte #%00011000;--
+    .byte #%00100100;--
+    .byte #%01000110;--
+    .byte #%01000110;--
+    .byte #%00100100;--
+    .byte #%00011000;--
+Frame5
+    .byte #0
+    .byte #%00011000;--
+    .byte #%00100100;--
+    .byte #%01000010;--
+    .byte #%01000110;--
+    .byte #%00100100;--
+    .byte #%00011000;--
+Frame6
+    .byte #0
+    .byte #%00011000;--
+    .byte #%00100100;--
+    .byte #%01000010;--
+    .byte #%01000110;--
+    .byte #%00101100;--
+    .byte #%00011000;--
+Frame7
+    .byte #0
+    .byte #%00011000;--
+    .byte #%00100100;--
+    .byte #%01000010;--
+    .byte #%01000010;--
+    .byte #%00101100;--
+    .byte #%00011000;--
+Frame8
+    .byte #0
+    .byte #%00011000;--
+    .byte #%00100100;--
+    .byte #%01000010;--
+    .byte #%01000010;--
+    .byte #%00111100;--
+    .byte #%00011000;--
+;---End Graphics Data---
+
+
+;---Color Data from PlayerPal 2600---
+
+ColorFrame0
+    .byte #0
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+ColorFrame1
+    .byte #0
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+ColorFrame2
+    .byte #0
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+ColorFrame3
+    .byte #0
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+ColorFrame4
+    .byte #0
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+ColorFrame5
+    .byte #0
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+ColorFrame6
+    .byte #0
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+ColorFrame7
+    .byte #0
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+ColorFrame8
+    .byte #0
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+    .byte #$0E;
+;---End Color Data---
 
     org $fffc
 
