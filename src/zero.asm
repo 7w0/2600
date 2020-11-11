@@ -8,65 +8,31 @@
 
 ; Position
 XP0 .byte
-XP1 .byte
-XBL .byte
 YP0 .byte
-YP1 .byte
-YBL .byte
 XDecP0 .byte
-XDecP1 .byte
-XDecBL .byte
 YDecP0 .byte
-YDecP1 .byte
-YDecBL .byte
 
 ; Destination
 XDestP0 .byte
-XDestP1 .byte
-XDestBL .byte
 YDestP0 .byte
-YDestP1 .byte
-YDestBL .byte
 XDestDecP0 .byte
-XDestDecP1 .byte
-XDestDecBL .byte
 YDestDecP0 .byte
-YDestDecP1 .byte
-YDestDecBL .byte
 
 ; Player Direction
 DirP0 .byte
-DirP1 .byte
 DirDecP0 .byte
-DirDecP1 .byte
 
 ; Acceleration
 XAccP0 .byte
-XAccP1 .byte
-XAccBL .byte
 YAccP0 .byte
-YAccP1 .byte
-YAccBL .byte
 XAccDecP0 .byte
-XAccDecP1 .byte
-XAccDecBL .byte
 YAccDecP0 .byte
-YAccDecP1 .byte
-YAccDecBL .byte
 
 ; Velocity
 XVelP0 .byte
-XVelP1 .byte
-XVelBL .byte
 YVelP0 .byte
-YVelP1 .byte
-YVelBL .byte
 XVelDecP0 .byte
-XVelDecP1 .byte
-XVelDecBL .byte
 YVelDecP0 .byte
-YVelDecP1 .byte
-YVelDecBL .byte
 
 TempWord .word
 
@@ -76,29 +42,22 @@ TempWord .word
 ; D3:0 Direction +Clockwise
 ; D4:0 Jump
 FlagsP0 .byte
-FlagsP1 .byte
 
 LineColorP0 .byte
-LineColorP1 .byte
 
 LineCountP0 .byte
-LineCountP1 .byte
 LineCountM0 .byte
-LineCountM1 .byte
-LineCountBL .byte
 
 PtrSpriteP .word
 FrameP0 .byte
-FrameP1 .byte
 PtrColorP0 .word
-PtrColorP1 .word
 
     seg Code
     org $f000
 
 ; Constants
 Gravity equ 5
-PlayerHeight equ 7
+PlayerHeight equ 9
 PlayerMinX equ 1
 PlayerMaxX equ 152
 PlayerMinY equ 170
@@ -113,7 +72,7 @@ TurnRate equ 10
 Start
     CLEAN_START
 
-;; Delay P0 and BL
+;; Vertical Delay P0 and BL
     lda #1
     sta VDELP0
     sta VDELBL
@@ -127,11 +86,6 @@ Start
     sta PtrColorP0
     lda #>ColorFrame0
     sta PtrColorP0+1
-
-    lda #<ColorFrame0
-    sta PtrColorP1
-    lda #>ColorFrame0
-    sta PtrColorP1+1
 
     lda #<Frame0
     sta PtrSpriteP
@@ -149,7 +103,6 @@ Start
 
     lda #$ff
     sta FlagsP0
-    sta FlagsP1
 ;; Frame
 Frame
     VERTICAL_SYNC
@@ -165,26 +118,12 @@ Frame
     ldx #0
     jsr SetX
 
-    lda XP1
-    ldx #1
-    jsr SetX
-
-    lda XBL
-    ldx #4
-    jsr SetX
-
     sta WSYNC
     sta HMOVE
 
 ; Init Y counters to object Y coordinates
     lda YP0
     sta LineCountP0
-
-    lda YP1
-    sta LineCountP1
-
-    lda YBL
-    sta LineCountBL
 
 ;; Vertical Blank Wait
 WaitVBlank
@@ -195,16 +134,6 @@ WaitVBlank
 ;; Visible
     ldx #96
 DisplayLoop
-
-;; Ball
-    ldy #0
-    lda #1
-    sec
-    isb LineCountBL
-    bcc .NoBall
-    ldy #2
-.NoBall
-    sty ENABL
 
 ;; P0
     lda #PlayerHeight
@@ -221,27 +150,11 @@ DisplayLoop
     lda (PtrSpriteP),y
     sta GRP0
 
-; P1
-    lda #PlayerHeight
-    sec
-    isb LineCountP1
-    bcs .DrawP1
-    lda #0
-.DrawP1
-    clc
-    adc FrameP1
-    tay
-    lda (PtrColorP1),y
-    sta LineColorP1
-    lda (PtrSpriteP),y
-    tay
-
     lda LineColorP0
     sta WSYNC
     sta COLUP0
-    lda LineColorP1
-    sta COLUP1
-    sty GRP1
+    sta WSYNC
+    sta GRP1
 
     dex
     bne DisplayLoop
@@ -262,8 +175,10 @@ DisplayLoop
     jsr HandleInput
     ldx #0
     jsr UpdatePlayers
-    ldx #1
-    jsr UpdatePlayers
+
+    lda DirP0
+    and #15
+
     jsr CalculateDestination
     jsr ApplyDestination
 
@@ -280,27 +195,14 @@ WaitOverscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 StartPositions
-    lda #PlayerMinX
+    lda #50
     sta XP0
-    lda #80
-    sta XBL
-    lda #PlayerMaxX
-    sta XP1
 
-    lda #PlayerMinY
+    lda #200
     sta YP0
-    sta YP1
-    lda #167
-    sta YBL
 
-    lda #8
-    sta REFP1
-
-    lda #28
+    lda #0
     sta FrameP0
-
-    lda #56
-    sta FrameP1
 
     rts
 
@@ -340,20 +242,6 @@ HandleInput
     and #$e0
     ora TempWord+0
     sta FlagsP0
-
-    ; P1
-    lda SWCHA
-    and #$0f
-    ldx INPT5
-    bpl .ButtonDownP1
-    ora #$10
-.ButtonDownP1
-    sta TempWord+0
-
-    lda FlagsP1
-    and #$e0
-    ora TempWord+0
-    sta FlagsP1
 
     rts
 
@@ -424,7 +312,7 @@ UpdatePlayers
 
 CalculateDestination
 
-    ldx #2
+    ldx #0
 .CalcDestLoop
     clc
     lda XVelDecP0,x
@@ -465,7 +353,7 @@ CalculateDestination
 
 ApplyDestination
 
-    ldx #2
+    ldx #0
 .ApplyDestLoop
     lda XDestDecP0,x
     sta XDecP0,x
@@ -486,108 +374,101 @@ ApplyDestination
 
     align $100
 
-PlayerBitmap
-    .byte #0
-    .byte #%00011000
-    .byte #%00100100
-    .byte #%01011010
-    .byte #%01111110
-    .byte #%00100100
-    .byte #%00011000
-
-P0Colors
-    .byte #0
-    .byte #$06
-    .byte #$06
-    .byte #$38
-    .byte #$38
-    .byte #$06
-    .byte #$06
-
-P1Colors
-    .byte #0
-    .byte #$06
-    .byte #$06
-    .byte #$98
-    .byte #$98
-    .byte #$06
-    .byte #$06
-
 Frame0
     .byte #0
-    .byte #%00011000
-    .byte #%00111100
-    .byte #%01000010
-    .byte #%01000010
-    .byte #%00100100
-    .byte #%00011000
+    .byte #%00000000
+    .byte #%00000000
+    .byte #%00000000
+    .byte #%10111101
+    .byte #%10111101
+    .byte #%00000000
+    .byte #%00000000
+    .byte #%00000000
 Frame1
     .byte #0
-    .byte #%00011000
-    .byte #%00101100
-    .byte #%01000010
-    .byte #%01000010
-    .byte #%00100100
-    .byte #%00011000
+    .byte #%00000000
+    .byte #%00000000
+    .byte #%00000000
+    .byte #%10111000
+    .byte #%00011101
+    .byte #%00000000
+    .byte #%00000000
+    .byte #%00000000
 Frame2
     .byte #0
-    .byte #%00011000
-    .byte #%00101100
-    .byte #%01000110
-    .byte #%01000010
-    .byte #%00100100
-    .byte #%00011000
+    .byte #%00000000
+    .byte #%00000000
+    .byte #%01000000
+    .byte #%10011100
+    .byte #%00111001
+    .byte #%00000010
+    .byte #%00000000
+    .byte #%00000000
 Frame3
     .byte #0
+    .byte #%00000000
+    .byte #%00000000
+    .byte #%01000000
     .byte #%00011000
-    .byte #%00100100
-    .byte #%01000110
-    .byte #%01000010
-    .byte #%00100100
     .byte #%00011000
+    .byte #%00000010
+    .byte #%00000000
+    .byte #%00000000
 Frame4
     .byte #0
+    .byte #%00000000
+    .byte #%00100000
+    .byte #%01000000
     .byte #%00011000
-    .byte #%00100100
-    .byte #%01000110
-    .byte #%01000110
-    .byte #%00100100
     .byte #%00011000
+    .byte #%00000010
+    .byte #%00000100
+    .byte #%00000000
 Frame5
     .byte #0
+    .byte #%00000000
+    .byte #%00100000
+    .byte #%00001000
     .byte #%00011000
-    .byte #%00100100
-    .byte #%01000010
-    .byte #%01000110
-    .byte #%00100100
     .byte #%00011000
+    .byte #%00010000
+    .byte #%00000100
+    .byte #%00000000
 Frame6
     .byte #0
+    .byte #%00010000
+    .byte #%00100000
+    .byte #%00001000
     .byte #%00011000
-    .byte #%00100100
-    .byte #%01000010
-    .byte #%01000110
-    .byte #%00101100
     .byte #%00011000
+    .byte #%00010000
+    .byte #%00000100
+    .byte #%00001000
 Frame7
     .byte #0
+    .byte #%00010000
+    .byte #%00000000
+    .byte #%00010000
     .byte #%00011000
-    .byte #%00100100
-    .byte #%01000010
-    .byte #%01000010
-    .byte #%00101100
     .byte #%00011000
+    .byte #%00001000
+    .byte #%00000000
+    .byte #%00001000
 Frame8
     .byte #0
     .byte #%00011000
-    .byte #%00100100
-    .byte #%01000010
-    .byte #%01000010
-    .byte #%00111100
+    .byte #%00000000
+    .byte #%00011000
+    .byte #%00011000
+    .byte #%00011000
+    .byte #%00011000
+    .byte #%00000000
     .byte #%00011000
 
 ColorFrame0
     .byte #0
+    .byte #$0E;
+    .byte #$0E;
     .byte #$0E;
     .byte #$0E;
     .byte #$0E;
