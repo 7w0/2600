@@ -1,0 +1,1 @@
+stella.exe .\bin\2600.bin

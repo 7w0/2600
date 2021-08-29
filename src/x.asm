@@ -3,80 +3,123 @@
     include "vcs.h"
     include "macro.h"
 
-    seg.u Variables
-    org $80
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; CONSTANTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-XP0W .byte
-XP0D .byte
+RAM_ORIGIN = $80
+CODE_ORIGIN = $f000
+VCS_START = $fffc
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; VARIABLES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    seg.u Variables
+    org RAM_ORIGIN
+
+XP0 .byte
+XP1 .byte
+XM0 .byte
+XM1 .byte
+XBL .byte
+
+DEC_XP0 .byte
+DEC_XP1 .byte
+DEC_XBL .byte
+
+XP0VW .byte
+XP0VD .byte
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; CODE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     seg Code
-    org $f000
+    org CODE_ORIGIN
 
 Start
     CLEAN_START
 
 ;; Set initial positions
-    lda #$0A
-    sta XP0W
-    lda #0
-    sta XP0D
+    lda #$00
+    sta XP0
+    lda #$0F
+    sta XP1
+    lda #$10
+    sta XM0
+    lda #$1F
+    sta XM1
+    lda #$20
+    sta XBL
 
 ;; Frame
 Frame
     VERTICAL_SYNC
 
-;; Vertical Blank timer setup
-;; (((36 * 76) + 13) / 64) = 42.9531
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; VERTICAL BLANK
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ; Timer (((36 * 76) + 13) / 64) = 42.9531
     lda #42
     sta WSYNC
     sta TIM64T
 
-;; Set X on all objects
-    lda XP0W
-    ldx #0
+    ; Set Xs
+    ldx #4
+XLoop
+    lda XP0,x
     jsr SetX
+    dex
+    bpl XLoop
 
     sta WSYNC
     sta HMOVE
 
-;; Vertical Blank Wait
+    ; Wait
 WaitVBlank
     lda INTIM
     bne WaitVBlank
     sta VBLANK ; Turn off VBLANK. A is already 0.
 
-;; Visible
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; VISIBLE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
     ldx #192
 DisplayLoop
     sta WSYNC
     dex
     bne DisplayLoop
 
-;; Overscan
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; OVERSCAN
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Turn on VBLANK
+    ; Turn on VBLANK
     lda #2
     sta VBLANK
 
-;; Timer setup
-;; (((30 * 76) + 13) / 64) = 35.828125
+    ; Timer (((30 * 76) + 13) / 64) = 35.828125
     lda #36
     sta WSYNC
     sta TIM64T
 
-; Overscan logic
+    ; Logic
 
-; Overscan wait
+    ; Wait
 WaitOverscan
     lda INTIM
     bne WaitOverscan
 
-; Next frame
     jmp Frame
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Set X Coordinate (A) of object offset (X) from P0
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; SUBROUTINES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Set X Coordinate (A) of object offset (X) from P0
 SetX
     sta WSYNC
     bit 0
@@ -93,8 +136,11 @@ SetXDivide
     sta HMP0,x
     rts
 
-;; End
-    org $fffc
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; SET START
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    org VCS_START
 
     .word Start
     .word Start
